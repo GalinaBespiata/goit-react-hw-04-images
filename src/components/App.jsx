@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 
 import { SearchBar } from './SearchBar/SearchBar.jsx';
 import { Loader } from './Loader/Loader.jsx';
@@ -7,81 +7,70 @@ import { getFetch } from 'services/api.js';
 import { ButtonLoadMore } from './Button/ButtonLoadMore.jsx';
 import { Modal } from './Modal/Modal.jsx';
 
-export class App extends Component {
-  state = {
-    images: [],
-    totalImages: 0,
-    // isHidden: false,
-    loading: false,
-    error: null,
-    modalIsOpen: false,
-    selectedImage: null,
-    query: '',
-    page: 1,
+export const App = () => {
+  const [images, setImages] = useState([]);
+  const [totalImages, setTotalImages] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+
+  const loadMore = () => {
+    setPage(prevState => prevState.page + 1);
   };
 
-  fetchImages = async () => {
-    const { query, page } = this.state;
-    try {
-      this.setState({ loading: true });
-      const data = await getFetch(query, page);
-
-      this.setState(prevState => {
-        return {
-          images: [...prevState.images, ...data.hits],
-          error: null,
-          totalImages: data.totalHits,
-        };
-      });
-    } catch (error) {
-      this.setState({ error: error.message });
-    } finally {
-      this.setState({ loading: false });
-    }
+  const handleOpenModal = largeImgUrl => {
+    setModalIsOpen(true);
+    setSelectedImage(largeImgUrl);
   };
 
-  componentDidUpdate(_, prevState) {
-    const { query, page } = this.state;
-    if (prevState.query !== query || prevState.page !== page) {
-      this.fetchImages();
-    }
-  }
-  loadMore = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const closeModal = () => {
+    setModalIsOpen(false);
+    setSelectedImage(null);
   };
-  handleOpenModal = largeImgUrl => {
-    this.setState({ modalIsOpen: true, selectedImage: largeImgUrl });
-  };
-  closeModal = () => {
-    this.setState({ modalIsOpen: false, selectedImage: null });
-  };
-  getQuery = query => {
-    this.setState({ query, page: 1, images: [], totalImages: 0 });
-  };
-  render() {
-    const {
-      images,
-      totalImages,
 
-      loading,
-      error,
-      modalIsOpen,
-      selectedImage,
-    } = this.state;
-    return (
-      <div style={{ position: 'relative', textAlign: 'center' }}>
-        <SearchBar onSubmit={this.getQuery} />
+  const onSubmit = query => {
+    setQuery(query);
+    setPage(1);
+    setImages([]);
+    setTotalImages(0);
+  };
 
-        {error !== null && <p>Ooops, we have mistake!!! {error}</p>}
-        <ImageGallery images={images} handleOpenModal={this.handleOpenModal} />
-        {loading && <Loader />}
-        {!loading && totalImages !== images.length && (
-          <ButtonLoadMore onClick={this.loadMore} />
-        )}
-        {modalIsOpen && (
-          <Modal largeUrl={selectedImage} closeModal={this.closeModal} />
-        )}
-      </div>
-    );
-  }
-}
+  useEffect(() => {
+    if (!query) return;
+    const fetchImages = async () => {
+      try {
+        setLoading(true);
+
+        const data = await getFetch(query, page);
+
+        setImages(prevState => {
+          return [...prevState, ...data.hits];
+        });
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchImages();
+  }, [page, query]);
+
+  return (
+    <div style={{ position: 'relative', textAlign: 'center' }}>
+      <SearchBar onSubmit={onSubmit} />
+
+      {error !== null && <p>Ooops, we have mistake!!! {error}</p>}
+      <ImageGallery images={images} handleOpenModal={handleOpenModal} />
+      {loading && <Loader />}
+      {!loading && totalImages !== images.length && (
+        <ButtonLoadMore onClick={loadMore} />
+      )}
+      {modalIsOpen && (
+        <Modal largeUrl={selectedImage} closeModal={closeModal} />
+      )}
+    </div>
+  );
+};
