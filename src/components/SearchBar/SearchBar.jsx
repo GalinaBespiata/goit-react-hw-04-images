@@ -1,44 +1,44 @@
-import { useState, useEffect } from 'react';
+import { Component } from 'react';
 
 import css from '../SearchBar/SearchBar.module.css';
 
-export function SearchBar(onSubmit) {
-  // state = { searchInput: '' };
-  const [searchInput, setSearchInput] = useState('');
-
-  // const reset = () => {
-  //   this.setState({
-  //     searchInput: '',
-  //   });
-
-  const handleOnChangeInput = evt => {
-    console.log(evt.target.value);
-    setSearchInput(evt.target.value);
-  };
-  const submitForm = evt => {
+export class SearchBar extends Component {
+  state = { searchInput: '' };
+  onSubmit = evt => {
     evt.preventDefault();
+    this.props.onSubmit(this.state.searchInput);
+    this.setState({ searchInput: '' });
 
-    onSubmit(searchInput);
-    setSearchInput('');
+    this.reset();
   };
 
-  return (
-    <header className={css.searchBar}>
-      <form className={css.searchForm} onSubmit={submitForm}>
-        <button type="submit" className={css.searchFormButton}>
-          <span className={css.searchFormButtonLabel}>Search</span>
-        </button>
+  reset = () => {
+    this.setState({
+      searchInput: '',
+    });
+  };
+  handleOnChangeInput = evt => {
+    this.setState({ searchInput: evt.target.value });
+  };
+  render() {
+    return (
+      <header className={css.searchBar}>
+        <form className={css.searchForm} onSubmit={this.onSubmit}>
+          <button type="submit" className={css.searchFormButton}>
+            <span className={css.searchFormButtonLabel}>Search</span>
+          </button>
 
-        <input
-          value={searchInput}
-          onChange={handleOnChangeInput}
-          className={css.searchFormInput}
-          type="text"
-          autoComplete="off"
-          autoFocus
-          placeholder="Search images and photos"
-        />
-      </form>
-    </header>
-  );
+          <input
+            value={this.state.searchInput}
+            onChange={this.handleOnChangeInput}
+            className={css.searchFormInput}
+            type="text"
+            autoComplete="off"
+            autoFocus
+            placeholder="Search images and photos"
+          />
+        </form>
+      </header>
+    );
+  }
 }

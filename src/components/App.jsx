@@ -1,108 +1,87 @@
-import { useState, useEffect } from 'react';
+import { Component } from 'react';
 
 import { SearchBar } from './SearchBar/SearchBar.jsx';
 import { Loader } from './Loader/Loader.jsx';
 import { ImageGallery } from './ImageGallery/ImageGallery.jsx';
-import { ImageGalleryItem } from './ImageGalleryItem/ImageGalleryItem.jsx';
+import { getFetch } from 'services/api.js';
 import { ButtonLoadMore } from './Button/ButtonLoadMore.jsx';
 import { Modal } from './Modal/Modal.jsx';
-import axios from 'axios';
 
-export function App() {
-  // state = {
-  //   images: [],
-  //   isHidden: false,
-  //   loading: false,
-  //   error: null,
-  //   modalIsOpen: false,
-  //   selectedImage: null,
-  //   query: '',
-  //   page: 1,
-  // };
-  const [images, setImages] = useState([]);
-  const [isHidden, setIsHidden] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [modalIsOpen, setModalIsOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [query, setQuery] = useState('');
-  const [page, setPage] = useState(1);
-  const fetchImages = async () => {
+export class App extends Component {
+  state = {
+    images: [],
+    totalImages: 0,
+    // isHidden: false,
+    loading: false,
+    error: null,
+    modalIsOpen: false,
+    selectedImage: null,
+    query: '',
+    page: 1,
+  };
+
+  fetchImages = async () => {
+    const { query, page } = this.state;
     try {
-      setLoading(true);
+      this.setState({ loading: true });
+      const data = await getFetch(query, page);
 
-      const { data } = await axios.get(
-        ` https://pixabay.com/api/?q=${query}&page=${page}&key=32908918-e7cc5cba0888a51be5caa34d0&image_type=photo&orientation=horizontal&per_page=12`
-      );
-      setImages(data.hits);
-
-      if (data.total / 12 <= page) {
-        setIsHidden(true);
-      }
+      this.setState(prevState => {
+        return {
+          images: [...prevState.images, ...data.hits],
+          error: null,
+          totalImages: data.totalHits,
+        };
+      });
     } catch (error) {
       this.setState({ error: error.message });
     } finally {
-      setLoading(false);
+      this.setState({ loading: false });
     }
   };
-  const showImagesFromTop = () => {
-    const sortedImages = images.slice().reverse();
-    setImages(sortedImages);
-  };
-  useEffect(() => {
-    fetchImages();
-  }, []);
-  // componentDidMount() {
-  //   this.fetchImages();
-  // }
-  useEffect(() => {
-    if (!query) return;
-    console.log('OOOOOOOOO');
-    setPage(1);
-    fetchImages();
-    //  else if (page !== 1) {
-    //   this.showImagesFromTop();
-    //   this.fetchImages();
-    // }
-  }, [page]);
-  // componentDidUpdate(_, prevState) {
-  //   if (prevState.query !== this.state.query) {
-  //     this.setState({ page: 1 });
-  //     this.fetchImages();
-  //   } else if (prevState.page !== this.state.page) {
-  //     this.showImagesFromTop();
-  //     this.fetchImages();
-  //   }
-  // }
-  const loadMore = () => {
-    setPage(prevState => prevState.page + 1);
-  };
-  const handleOpenModal = largeImgUrl => {
-    setModalIsOpen(true);
-    setSelectedImage(largeImgUrl);
-  };
-  const closeModal = () => {
-    setModalIsOpen(false);
-    setSelectedImage(null);
-  };
-  const getQuery = query => {
-    setQuery(query);
-    setPage(1);
-    setImages([]);
-  };
 
-  return (
-    <div style={{ position: 'relative' }}>
-      <SearchBar onSubmit={getQuery} />
-      {loading && <Loader />}
+  componentDidUpdate(_, prevState) {
+    const { query, page } = this.state;
+    if (prevState.query !== query || prevState.page !== page) {
+      this.fetchImages();
+    }
+  }
+  loadMore = () => {
+    this.setState(prevState => ({ page: prevState.page + 1 }));
+  };
+  handleOpenModal = largeImgUrl => {
+    this.setState({ modalIsOpen: true, selectedImage: largeImgUrl });
+  };
+  closeModal = () => {
+    this.setState({ modalIsOpen: false, selectedImage: null });
+  };
+  getQuery = query => {
+    this.setState({ query, page: 1, images: [], totalImages: 0 });
+  };
+  render() {
+    const {
+      images,
+      totalImages,
 
-      {error !== null && <p>Ooops, we have mistake!!! {error}</p>}
-      <ImageGallery images={images} handleOpenModal={handleOpenModal} />
-      {!isHidden || loading & <ButtonLoadMore onClick={loadMore} />}
-      {modalIsOpen && (
-        <Modal largeUrl={selectedImage} closeModal={closeModal} />
-      )}
-      <ImageGalleryItem />
-    </div>
-  );
+      loading,
+      error,
+      modalIsOpen,
+      selectedImage,
+    } = this.state;
+    return (
+      <div style={{ position: 'relative', textAlign: 'center' }}>
+        <SearchBar onSubmit={this.getQuery} />
+
+        {error !== null && <p>Ooops, we have mistake!!! {error}</p>}
+        <ImageGallery images={images} handleOpenModal={this.handleOpenModal} />
+        {loading && <Loader />}
+        {!loading && totalImages !== images.length && (
+          <ButtonLoadMore onClick={this.loadMore} />
+        )}
+        {modalIsOpen && (
+          <Modal largeUrl={selectedImage} closeModal={this.closeModal} />
+        )}
+      </div>
+    );
+  }
 }
