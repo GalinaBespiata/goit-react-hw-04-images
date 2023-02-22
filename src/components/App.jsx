@@ -18,7 +18,7 @@ export const App = () => {
   const [page, setPage] = useState(1);
 
   const loadMore = () => {
-    setPage(prevState => prevState.page + 1);
+    setPage(prevPage => prevPage + 1);
   };
 
   const handleOpenModal = largeImgUrl => {
@@ -46,8 +46,8 @@ export const App = () => {
 
         const data = await getFetch(query, page);
 
-        setImages(prevState => {
-          return [...prevState, ...data.hits];
+        setImages(prevImages => {
+          return [...prevImages, ...data.hits];
         });
       } catch (error) {
         setError(error.message);
